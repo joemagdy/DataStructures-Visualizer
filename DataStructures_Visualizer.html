@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Data Structures Visualizer</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --panel: #111827;
+    --border: #1e2d45;
+    --accent: #00d4ff;
+    --accent2: #7c3aed;
+    --green: #00ff9d;
+    --red: #ff4d6d;
+    --yellow: #ffd60a;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --node-bg: #1e2d45;
+    --node-border: #00d4ff;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 24px 20px; }
+
+  header {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  header h1 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 2rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -0.5px;
+  }
+  header p {
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    margin-top: 6px;
+  }
+
+  /* Tab nav */
+  .tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+  .tab {
+    padding: 10px 20px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--muted);
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: all 0.2s;
+    letter-spacing: 0.5px;
+  }
+  .tab:hover { border-color: var(--accent); color: var(--accent); }
+  .tab.active {
+    border-color: var(--accent);
+    background: rgba(0,212,255,0.08);
+    color: var(--accent);
+    box-shadow: 0 0 20px rgba(0,212,255,0.1);
+  }
+
+  /* Main layout */
+  .main { display: grid; grid-template-columns: 300px 1fr; gap: 20px; }
+  @media (max-width: 700px) { .main { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+
+  .panel-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 16px;
+    font-weight: 600;
+  }
+
+  /* Controls */
+  .input-group { display: flex; gap: 8px; margin-bottom: 12px; }
+  input[type="number"] {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  input[type="number"]:focus { border-color: var(--accent); }
+  input[type="number"]::-webkit-inner-spin-button { opacity: 0.3; }
+
+  .btn {
+    padding: 10px 16px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    font-weight: 600;
+    transition: all 0.2s;
+    letter-spacing: 0.5px;
+  }
+  .btn-primary { background: var(--accent); color: #000; }
+  .btn-primary:hover { background: #00b8d9; transform: translateY(-1px); }
+  .btn-danger { background: transparent; border: 1px solid var(--red); color: var(--red); }
+  .btn-danger:hover { background: rgba(255,77,109,0.1); }
+  .btn-full { width: 100%; margin-bottom: 8px; }
+  .btn-green { background: transparent; border: 1px solid var(--green); color: var(--green); }
+  .btn-green:hover { background: rgba(0,255,157,0.1); }
+
+  /* Log */
+  .log {
+    margin-top: 16px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    min-height: 80px;
+    max-height: 160px;
+    overflow-y: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+  }
+  .log-entry { padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .log-entry.success { color: var(--green); }
+  .log-entry.error { color: var(--red); }
+  .log-entry.info { color: var(--accent); }
+  .log-entry.warn { color: var(--yellow); }
+
+  /* Visualizer */
+  .viz-area {
+    min-height: 300px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    position: relative;
+    overflow: auto;
+  }
+
+  /* Nodes */
+  .nodes-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0;
+    justify-content: center;
+  }
+  .node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .node-box {
+    width: 52px; height: 52px;
+    background: var(--node-bg);
+    border: 2px solid var(--node-border);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--accent);
+    transition: all 0.3s;
+    position: relative;
+    animation: nodeIn 0.3s ease;
+  }
+  @keyframes nodeIn {
+    from { transform: scale(0) translateY(-10px); opacity: 0; }
+    to { transform: scale(1) translateY(0); opacity: 1; }
+  }
+  .node-box.highlight {
+    border-color: var(--green);
+    color: var(--green);
+    box-shadow: 0 0 20px rgba(0,255,157,0.3);
+    background: rgba(0,255,157,0.07);
+  }
+  .node-box.removing {
+    border-color: var(--red);
+    color: var(--red);
+    box-shadow: 0 0 20px rgba(255,77,109,0.3);
+    animation: nodeOut 0.4s ease forwards;
+  }
+  @keyframes nodeOut {
+    to { transform: scale(0); opacity: 0; }
+  }
+  .arrow {
+    display: flex; align-items: center;
+    color: var(--muted);
+    font-size: 1.2rem;
+    padding: 0 4px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .null-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+    padding: 0 8px;
+  }
+
+  /* Stack visual */
+  .stack-col {
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: center;
+    gap: 4px;
+  }
+  .stack-node {
+    width: 120px; height: 44px;
+    background: var(--node-bg);
+    border: 2px solid var(--accent2);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #a78bfa;
+    animation: nodeIn 0.3s ease;
+    transition: all 0.3s;
+    position: relative;
+  }
+  .stack-node.top-node {
+    border-color: var(--yellow);
+    color: var(--yellow);
+    box-shadow: 0 0 16px rgba(255,214,10,0.2);
+  }
+  .top-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--yellow);
+    text-align: right;
+    position: absolute;
+    right: -38px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  .stack-base {
+    width: 130px;
+    border-top: 3px solid var(--muted);
+    margin-top: 4px;
+    text-align: center;
+    padding-top: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+  }
+
+  /* Queue visual */
+  .queue-row {
+    display: flex;
+    align-items: center;
+    gap: 0;
+  }
+  .queue-node {
+    width: 52px; height: 52px;
+    background: var(--node-bg);
+    border: 2px solid var(--green);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--green);
+    animation: nodeIn 0.3s ease;
+    transition: all 0.3s;
+    position: relative;
+  }
+  .queue-node:first-child { border-radius: 8px 0 0 8px; }
+  .queue-node:last-child { border-radius: 0 8px 8px 0; }
+  .queue-node:only-child { border-radius: 8px; }
+  .queue-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    text-align: center;
+    margin-top: 6px;
+    color: var(--muted);
+  }
+  .queue-end-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    padding: 0 12px;
+    color: var(--muted);
+  }
+  .queue-wrapper { display: flex; flex-direction: column; align-items: center; }
+  .queue-labels-row { display: flex; gap: 0; }
+
+  /* BST */
+  .bst-svg { width: 100%; min-height: 260px; }
+  .bst-node-circle { fill: var(--node-bg); stroke: var(--accent); stroke-width: 2; transition: all 0.3s; }
+  .bst-node-circle.found { stroke: var(--green); fill: rgba(0,255,157,0.1); }
+  .bst-node-text { fill: var(--accent); font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; text-anchor: middle; dominant-baseline: middle; }
+  .bst-node-text.found { fill: var(--green); }
+  .bst-edge { stroke: var(--border); stroke-width: 1.5; }
+
+  .empty-msg {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--muted);
+    text-align: center;
+    padding: 40px;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    width: 100%;
+  }
+
+  /* Code panel */
+  .code-block {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    color: #94a3b8;
+    line-height: 1.7;
+    margin-top: 16px;
+    white-space: pre;
+    overflow-x: auto;
+  }
+  .kw { color: #7c3aed; }
+  .fn { color: #00d4ff; }
+  .cm { color: #475569; }
+  .num { color: #ffd60a; }
+
+  .section-divider {
+    border: none; border-top: 1px solid var(--border);
+    margin: 14px 0;
+  }
+
+  .ds-desc {
+    font-size: 0.82rem;
+    color: var(--muted);
+    line-height: 1.6;
+    margin-bottom: 14px;
+  }
+
+  .github-banner {
+    margin-top: 28px;
+    background: linear-gradient(135deg, rgba(124,58,237,0.1), rgba(0,212,255,0.1));
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .github-banner .gh-icon { font-size: 1.8rem; }
+  .github-banner h3 { font-size: 0.9rem; color: var(--text); margin-bottom: 4px; }
+  .github-banner p { font-size: 0.78rem; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>&gt; Data Structures Visualizer</h1>
+    <p>// Interactive C++ Lists — by Yousuf Magdy </p>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('ll')">Linked List</button>
+    <button class="tab" onclick="switchTab('stack')">Stack</button>
+    <button class="tab" onclick="switchTab('queue')">Queue</button>
+    <button class="tab" onclick="switchTab('bst')">Binary Search Tree</button>
+  </div>
+
+  <div class="main">
+    <!-- Controls Panel -->
+    <div class="panel" id="controls-panel">
+      <div class="panel-title" id="ds-title">// Linked List</div>
+      <div class="ds-desc" id="ds-desc">A linear structure where each node points to the next. Great for dynamic data where size changes frequently.</div>
+      <hr class="section-divider">
+
+      <div id="ll-controls">
+        <div class="input-group">
+          <input type="number" id="ll-val" placeholder="value" min="0" max="999" />
+          <button class="btn btn-primary" onclick="llInsert()">Insert</button>
+        </div>
+        <div class="input-group">
+          <input type="number" id="ll-del-val" placeholder="value" min="0" max="999" />
+          <button class="btn btn-danger" onclick="llRemove()">Delete</button>
+        </div>
+        <div class="input-group">
+          <input type="number" id="ll-search-val" placeholder="value" min="0" max="999" />
+          <button class="btn btn-green" onclick="llSearch()">Search</button>
+        </div>
+        <button class="btn btn-danger btn-full" style="margin-top:4px" onclick="llClear()">Clear All</button>
+      </div>
+
+      <div id="stack-controls" style="display:none">
+        <div class="input-group">
+          <input type="number" id="stack-val" placeholder="value" min="0" max="999" />
+          <button class="btn btn-primary" onclick="stackPush()">Push</button>
+        </div>
+        <button class="btn btn-danger btn-full" onclick="stackPop()">Pop (remove top)</button>
+        <button class="btn btn-green btn-full" onclick="stackPeek()">Peek (see top)</button>
+        <button class="btn btn-danger btn-full" onclick="stackClear()">Clear All</button>
+      </div>
+
+      <div id="queue-controls" style="display:none">
+        <div class="input-group">
+          <input type="number" id="queue-val" placeholder="value" min="0" max="999" />
+          <button class="btn btn-primary" onclick="queueEnqueue()">Enqueue</button>
+        </div>
+        <button class="btn btn-danger btn-full" onclick="queueDequeue()">Dequeue (remove front)</button>
+        <button class="btn btn-green btn-full" onclick="queueFront()">Peek Front</button>
+        <button class="btn btn-danger btn-full" onclick="queueClear()">Clear All</button>
+      </div>
+
+      <div id="bst-controls" style="display:none">
+        <div class="input-group">
+          <input type="number" id="bst-val" placeholder="value" min="0" max="999" />
+          <button class="btn btn-primary" onclick="bstInsert()">Insert</button>
+        </div>
+        <div class="input-group">
+          <input type="number" id="bst-del-val" placeholder="value" min="0" max="999" />
+          <button class="btn btn-danger" onclick="bstRemove()">Delete</button>
+        </div>
+        <div class="input-group">
+          <input type="number" id="bst-search-val" placeholder="value" min="0" max="999" />
+          <button class="btn btn-green" onclick="bstSearch()">Search</button>
+        </div>
+        <button class="btn btn-danger btn-full" style="margin-top:4px" onclick="bstClear()">Clear All</button>
+      </div>
+
+      <hr class="section-divider">
+      <div class="panel-title">// Log</div>
+      <div class="log" id="log"></div>
+    </div>
+
+    <!-- Visualizer + Code Panel -->
+    <div style="display:flex;flex-direction:column;gap:20px;">
+      <div class="panel">
+        <div class="panel-title">// Visualization</div>
+        <div class="viz-area" id="viz-area">
+          <div class="empty-msg">Insert a value to begin visualization →</div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">// C++ Source Code</div>
+        <div class="code-block" id="code-block"></div>
+      </div>
+    </div>
+  </div>
+
+  
+</div>
+
+<script>
+// ===================== STATE =====================
+let llList = [];
+let stackData = [];
+let queueData = [];
+let bstRoot = null;
+let currentTab = 'll';
+let highlightTimeout = null;
+
+// ===================== TAB SWITCH =====================
+const titles = { ll: '// Linked List', stack: '// Stack', queue: '// Queue', bst: '// Binary Search Tree' };
+const descs = {
+  ll: 'A linear structure where each node points to the next. Dynamic size, O(n) search, O(1) insert at end.',
+  stack: 'LIFO — Last In, First Out. Like a stack of plates. Push adds to top, Pop removes from top. O(1) both.',
+  queue: 'FIFO — First In, First Out. Like a real queue. Enqueue adds to back, Dequeue removes from front. O(1) both.',
+  bst: 'A tree where left child < parent < right child. Enables O(log n) search, insert, and delete on average.'
+};
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', ['ll','stack','queue','bst'][i] === tab));
+  ['ll','stack','queue','bst'].forEach(t => {
+    document.getElementById(t+'-controls').style.display = t === tab ? 'block' : 'none';
+  });
+  document.getElementById('ds-title').textContent = titles[tab];
+  document.getElementById('ds-desc').textContent = descs[tab];
+  renderViz();
+  renderCode();
+}
+
+// ===================== LOG =====================
+function log(msg, type='info') {
+  const el = document.getElementById('log');
+  const d = document.createElement('div');
+  d.className = 'log-entry ' + type;
+  d.textContent = '> ' + msg;
+  el.prepend(d);
+  if (el.children.length > 20) el.removeChild(el.lastChild);
+}
+
+// ===================== LINKED LIST =====================
+function llInsert() {
+  const v = parseInt(document.getElementById('ll-val').value);
+  if (isNaN(v)) { log('Enter a valid number', 'error'); return; }
+  if (llList.length >= 10) { log('Max 10 nodes for display', 'warn'); return; }
+  llList.push(v);
+  log(`Inserted ${v} → tail`, 'success');
+  document.getElementById('ll-val').value = '';
+  renderViz();
+}
+function llRemove() {
+  const v = parseInt(document.getElementById('ll-del-val').value);
+  if (isNaN(v)) { log('Enter a valid number', 'error'); return; }
+  const i = llList.indexOf(v);
+  if (i === -1) { log(`Value ${v} not found`, 'error'); return; }
+  llList.splice(i, 1);
+  log(`Deleted node ${v}`, 'success');
+  document.getElementById('ll-del-val').value = '';
+  renderViz();
+}
+function llSearch() {
+  const v = parseInt(document.getElementById('ll-search-val').value);
+  if (isNaN(v)) { log('Enter a valid number', 'error'); return; }
+  const i = llList.indexOf(v);
+  if (i === -1) { log(`Value ${v} not found`, 'error'); return; }
+  log(`Found ${v} at index ${i} ✓`, 'success');
+  renderViz(v);
+  document.getElementById('ll-search-val').value = '';
+}
+function llClear() { llList = []; log('List cleared', 'warn'); renderViz(); }
+
+// ===================== STACK =====================
+function stackPush() {
+  const v = parseInt(document.getElementById('stack-val').value);
+  if (isNaN(v)) { log('Enter a valid number', 'error'); return; }
+  if (stackData.length >= 8) { log('Max 8 items for display', 'warn'); return; }
+  stackData.push(v);
+  log(`Pushed ${v} to top`, 'success');
+  document.getElementById('stack-val').value = '';
+  renderViz();
+}
+function stackPop() {
+  if (!stackData.length) { log('Stack is empty!', 'error'); return; }
+  const v = stackData.pop();
+  log(`Popped ${v} from top`, 'success');
+  renderViz();
+}
+function stackPeek() {
+  if (!stackData.length) { log('Stack is empty!', 'error'); return; }
+  log(`Top = ${stackData[stackData.length-1]}`, 'info');
+  renderViz(stackData[stackData.length-1]);
+}
+function stackClear() { stackData = []; log('Stack cleared', 'warn'); renderViz(); }
+
+// ===================== QUEUE =====================
+function queueEnqueue() {
+  const v = parseInt(document.getElementById('queue-val').value);
+  if (isNaN(v)) { log('Enter a valid number', 'error'); return; }
+  if (queueData.length >= 8) { log('Max 8 items for display', 'warn'); return; }
+  queueData.push(v);
+  log(`Enqueued ${v} → back`, 'success');
+  document.getElementById('queue-val').value = '';
+  renderViz();
+}
+function queueDequeue() {
+  if (!queueData.length) { log('Queue is empty!', 'error'); return; }
+  const v = queueData.shift();
+  log(`Dequeued ${v} from front`, 'success');
+  renderViz();
+}
+function queueFront() {
+  if (!queueData.length) { log('Queue is empty!', 'error'); return; }
+  log(`Front = ${queueData[0]}`, 'info');
+  renderViz(queueData[0]);
+}
+function queueClear() { queueData = []; log('Queue cleared', 'warn'); renderViz(); }
+
+// ===================== BST =====================
+class BSTNode { constructor(v) { this.val=v; this.left=null; this.right=null; } }
+function bstInsertNode(root,v) {
+  if (!root) return new BSTNode(v);
+  if (v < root.val) root.left = bstInsertNode(root.left, v);
+  else if (v > root.val) root.right = bstInsertNode(root.right, v);
+  return root;
+}
+function bstDeleteNode(root,v) {
+  if (!root) return null;
+  if (v < root.val) { root.left = bstDeleteNode(root.left, v); }
+  else if (v > root.val) { root.right = bstDeleteNode(root.right, v); }
+  else {
+    if (!root.left) return root.right;
+    if (!root.right) return root.left;
+    let min = root.right;
+    while (min.left) min = min.left;
+    root.val = min.val;
+    root.right = bstDeleteNode(root.right, min.val);
+  }
+  return root;
+}
+function bstSearchNode(root,v) {
+  if (!root) return false;
+  if (root.val === v) return true;
+  return v < root.val ? bstSearchNode(root.left,v) : bstSearchNode(root.right,v);
+}
+function bstInsert() {
+  const v = parseInt(document.getElementById('bst-val').value);
+  if (isNaN(v)) { log('Enter a valid number','error'); return; }
+  bstRoot = bstInsertNode(bstRoot, v);
+  log(`Inserted ${v} into BST`, 'success');
+  document.getElementById('bst-val').value = '';
+  renderViz();
+}
+function bstRemove() {
+  const v = parseInt(document.getElementById('bst-del-val').value);
+  if (isNaN(v)) { log('Enter a valid number','error'); return; }
+  if (!bstSearchNode(bstRoot,v)) { log(`${v} not found in BST`,'error'); return; }
+  bstRoot = bstDeleteNode(bstRoot, v);
+  log(`Deleted ${v} from BST`, 'success');
+  document.getElementById('bst-del-val').value = '';
+  renderViz();
+}
+function bstSearch() {
+  const v = parseInt(document.getElementById('bst-search-val').value);
+  if (isNaN(v)) { log('Enter a valid number','error'); return; }
+  const found = bstSearchNode(bstRoot, v);
+  log(found ? `Found ${v} in BST ✓` : `${v} not found in BST`, found?'success':'error');
+  if (found) renderViz(v);
+  document.getElementById('bst-search-val').value = '';
+}
+function bstClear() { bstRoot = null; log('BST cleared','warn'); renderViz(); }
+
+// ===================== RENDER =====================
+function renderViz(highlight=null) {
+  const area = document.getElementById('viz-area');
+  if (currentTab === 'll') renderLL(area, highlight);
+  else if (currentTab === 'stack') renderStack(area, highlight);
+  else if (currentTab === 'queue') renderQueue(area, highlight);
+  else if (currentTab === 'bst') renderBST(area, highlight);
+  renderCode();
+}
+
+function renderLL(area, hl) {
+  if (!llList.length) { area.innerHTML = '<div class="empty-msg">List is empty — insert a value →</div>'; return; }
+  let html = '<div class="nodes-row">';
+  llList.forEach((v,i) => {
+    html += `<div class="node">
+      <div class="node-box ${hl===v?'highlight':''}">${v}</div>
+    </div>`;
+    if (i < llList.length-1) html += '<div class="arrow">→</div>';
+  });
+  html += '<div class="null-label">→ NULL</div></div>';
+  html += `<div style="margin-top:16px;font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--muted)">Size: ${llList.length} nodes</div>`;
+  area.innerHTML = html;
+}
+
+function renderStack(area, hl) {
+  if (!stackData.length) { area.innerHTML = '<div class="empty-msg">Stack is empty — push a value →</div>'; return; }
+  let html = '<div style="display:flex;flex-direction:column;align-items:center;gap:4px;">';
+  for (let i = stackData.length-1; i >= 0; i--) {
+    const isTop = i === stackData.length-1;
+    html += `<div style="position:relative;display:flex;align-items:center;">
+      <div class="stack-node ${isTop?'top-node':''}">${stackData[i]}</div>
+      ${isTop ? '<span class="top-label">← TOP</span>' : ''}
+    </div>`;
+  }
+  html += '<div class="stack-base">▬▬▬ BASE ▬▬▬</div>';
+  html += '</div>';
+  area.innerHTML = html;
+}
+
+function renderQueue(area, hl) {
+  if (!queueData.length) { area.innerHTML = '<div class="empty-msg">Queue is empty — enqueue a value →</div>'; return; }
+  let html = '<div style="display:flex;flex-direction:column;align-items:center;">';
+  html += '<div style="display:flex;align-items:center;gap:0;">';
+  html += '<div style="font-family:JetBrains Mono,monospace;font-size:0.7rem;color:var(--accent);margin-right:8px;">FRONT →</div>';
+  html += '<div class="queue-row">';
+  queueData.forEach((v,i) => {
+    html += `<div class="queue-node" style="${i<queueData.length-1?'border-right:none;':''}">${v}</div>`;
+  });
+  html += '</div>';
+  html += '<div style="font-family:JetBrains Mono,monospace;font-size:0.7rem;color:var(--muted);margin-left:8px;">← BACK</div>';
+  html += '</div>';
+  html += `<div style="margin-top:12px;font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--muted)">Size: ${queueData.length}</div>`;
+  html += '</div>';
+  area.innerHTML = html;
+}
+
+function renderBST(area, hl) {
+  if (!bstRoot) { area.innerHTML = '<div class="empty-msg">BST is empty — insert a value →</div>'; return; }
+  const W = 560, H = 300, R = 22;
+  function getHeight(n) { if (!n) return 0; return 1+Math.max(getHeight(n.left),getHeight(n.right)); }
+  const h = Math.min(getHeight(bstRoot), 5);
+  const svgH = Math.max(260, h * 70 + 40);
+  let edges = '', nodes = '';
+  function draw(node, x, y, gap) {
+    if (!node) return;
+    if (node.left) {
+      const nx = x-gap, ny = y+70;
+      edges += `<line class="bst-edge" x1="${x}" y1="${y+R}" x2="${nx}" y2="${ny-R}"/>`;
+      draw(node.left, nx, ny, gap/2);
+    }
+    if (node.right) {
+      const nx = x+gap, ny = y+70;
+      edges += `<line class="bst-edge" x1="${x}" y1="${y+R}" x2="${nx}" y2="${ny-R}"/>`;
+      draw(node.right, nx, ny, gap/2);
+    }
+    const isHl = node.val === hl;
+    nodes += `<g>
+      <circle class="bst-node-circle ${isHl?'found':''}" cx="${x}" cy="${y}" r="${R}"/>
+      <text class="bst-node-text ${isHl?'found':''}" x="${x}" y="${y}">${node.val}</text>
+    </g>`;
+  }
+  draw(bstRoot, W/2, 36, W/5);
+  area.innerHTML = `<svg class="bst-svg" viewBox="0 0 ${W} ${svgH}" xmlns="http://www.w3.org/2000/svg">${edges}${nodes}</svg>`;
+}
+
+// ===================== CODE =====================
+const codes = {
+  ll: `<span class="cm">// LinkedList.h — Singly Linked List in C++</span>
+<span class="kw">struct</span> <span class="fn">Node</span> {
+  <span class="kw">int</span> data;
+  Node* next;
+  <span class="fn">Node</span>(<span class="kw">int</span> val) : data(val), next(<span class="kw">nullptr</span>) {}
+};
+
+<span class="kw">class</span> <span class="fn">LinkedList</span> {
+  Node* head;
+<span class="kw">public</span>:
+  <span class="fn">LinkedList</span>() : head(<span class="kw">nullptr</span>) {}
+
+  <span class="kw">void</span> <span class="fn">insert</span>(<span class="kw">int</span> val) {
+    Node* n = <span class="kw">new</span> Node(val);
+    <span class="kw">if</span> (!head) { head = n; <span class="kw">return</span>; }
+    Node* curr = head;
+    <span class="kw">while</span> (curr->next) curr = curr->next;
+    curr->next = n;
+  }
+
+  <span class="kw">void</span> <span class="fn">remove</span>(<span class="kw">int</span> val) {
+    <span class="kw">if</span> (!head) <span class="kw">return</span>;
+    <span class="kw">if</span> (head->data == val) {
+      Node* tmp = head;
+      head = head->next;
+      <span class="kw">delete</span> tmp; <span class="kw">return</span>;
+    }
+    Node* curr = head;
+    <span class="kw">while</span> (curr->next && curr->next->data != val)
+      curr = curr->next;
+    <span class="kw">if</span> (curr->next) {
+      Node* tmp = curr->next;
+      curr->next = tmp->next;
+      <span class="kw">delete</span> tmp;
+    }
+  }
+
+  <span class="kw">bool</span> <span class="fn">search</span>(<span class="kw">int</span> val) {
+    Node* curr = head;
+    <span class="kw">while</span> (curr) {
+      <span class="kw">if</span> (curr->data == val) <span class="kw">return true</span>;
+      curr = curr->next;
+    }
+    <span class="kw">return false</span>;
+  }
+};`,
+  stack: `<span class="cm">// Stack.h — Stack using array in C++</span>
+<span class="kw">class</span> <span class="fn">Stack</span> {
+  <span class="kw">int</span> arr[<span class="num">100</span>];
+  <span class="kw">int</span> top = -<span class="num">1</span>;
+<span class="kw">public</span>:
+  <span class="kw">void</span> <span class="fn">push</span>(<span class="kw">int</span> val) {
+    arr[++top] = val;
+  }
+
+  <span class="kw">int</span> <span class="fn">pop</span>() {
+    <span class="kw">if</span> (top == -<span class="num">1</span>) <span class="kw">return</span> -<span class="num">1</span>; <span class="cm">// empty</span>
+    <span class="kw">return</span> arr[top--];
+  }
+
+  <span class="kw">int</span> <span class="fn">peek</span>() {
+    <span class="kw">if</span> (top == -<span class="num">1</span>) <span class="kw">return</span> -<span class="num">1</span>;
+    <span class="kw">return</span> arr[top];
+  }
+
+  <span class="kw">bool</span> <span class="fn">isEmpty</span>() {
+    <span class="kw">return</span> top == -<span class="num">1</span>;
+  }
+};
+
+<span class="cm">// Usage:</span>
+<span class="fn">Stack</span> s;
+s.<span class="fn">push</span>(<span class="num">10</span>);   <span class="cm">// [10]</span>
+s.<span class="fn">push</span>(<span class="num">20</span>);   <span class="cm">// [10, 20]  ← top</span>
+s.<span class="fn">pop</span>();    <span class="cm">// returns 20, stack: [10]</span>`,
+  queue: `<span class="cm">// Queue.h — Queue using linked list in C++</span>
+<span class="kw">class</span> <span class="fn">Queue</span> {
+  Node* front;
+  Node* back;
+<span class="kw">public</span>:
+  <span class="fn">Queue</span>() : front(<span class="kw">nullptr</span>), back(<span class="kw">nullptr</span>) {}
+
+  <span class="kw">void</span> <span class="fn">enqueue</span>(<span class="kw">int</span> val) {
+    Node* n = <span class="kw">new</span> Node(val);
+    <span class="kw">if</span> (!back) { front = back = n; <span class="kw">return</span>; }
+    back->next = n;
+    back = n;
+  }
+
+  <span class="kw">int</span> <span class="fn">dequeue</span>() {
+    <span class="kw">if</span> (!front) <span class="kw">return</span> -<span class="num">1</span>;
+    <span class="kw">int</span> val = front->data;
+    Node* tmp = front;
+    front = front->next;
+    <span class="kw">if</span> (!front) back = <span class="kw">nullptr</span>;
+    <span class="kw">delete</span> tmp;
+    <span class="kw">return</span> val;
+  }
+
+  <span class="kw">int</span> <span class="fn">peekFront</span>() {
+    <span class="kw">return</span> front ? front->data : -<span class="num">1</span>;
+  }
+};`,
+  bst: `<span class="cm">// BST.h — Binary Search Tree in C++</span>
+<span class="kw">struct</span> <span class="fn">BSTNode</span> {
+  <span class="kw">int</span> val;
+  BSTNode *left, *right;
+  <span class="fn">BSTNode</span>(<span class="kw">int</span> v) : val(v), left(<span class="kw">nullptr</span>), right(<span class="kw">nullptr</span>) {}
+};
+
+BSTNode* <span class="fn">insert</span>(BSTNode* root, <span class="kw">int</span> v) {
+  <span class="kw">if</span> (!root) <span class="kw">return new</span> <span class="fn">BSTNode</span>(v);
+  <span class="kw">if</span> (v < root->val)
+    root->left = <span class="fn">insert</span>(root->left, v);
+  <span class="kw">else if</span> (v > root->val)
+    root->right = <span class="fn">insert</span>(root->right, v);
+  <span class="kw">return</span> root;
+}
+
+<span class="kw">bool</span> <span class="fn">search</span>(BSTNode* root, <span class="kw">int</span> v) {
+  <span class="kw">if</span> (!root) <span class="kw">return false</span>;
+  <span class="kw">if</span> (root->val == v) <span class="kw">return true</span>;
+  <span class="kw">return</span> v < root->val
+    ? <span class="fn">search</span>(root->left, v)
+    : <span class="fn">search</span>(root->right, v);
+}
+
+<span class="cm">// Property: left < parent < right</span>
+<span class="cm">// Search is O(log n) on average</span>`
+};
+
+function renderCode() {
+  document.getElementById('code-block').innerHTML = codes[currentTab];
+}
+
+// ===================== DOWNLOAD C++ =====================
+function downloadCpp() {
+  const files = {
+    'main.cpp': `#include <iostream>
+#include "LinkedList.h"
+#include "Stack.h"
+#include "Queue.h"
+#include "BST.h"
+using namespace std;
+
+int main() {
+    int choice;
+    cout << "=== Data Structures Visualizer ===" << endl;
+    cout << "1. Linked List" << endl;
+    cout << "2. Stack" << endl;
+    cout << "3. Queue" << endl;
+    cout << "4. Binary Search Tree" << endl;
+    cout << "Choose: ";
+    cin >> choice;
+    // ... (expand per module)
+    return 0;
+}`,
+    'LinkedList.h': `#pragma once
+#include <iostream>
+using namespace std;
+
+struct Node {
+    int data;
+    Node* next;
+    Node(int val) : data(val), next(nullptr) {}
+};
+
+class LinkedList {
+    Node* head;
+public:
+    LinkedList() : head(nullptr) {}
+    ~LinkedList() {
+        Node* curr = head;
+        while (curr) { Node* t = curr; curr = curr->next; delete t; }
+    }
+    void insert(int val) {
+        Node* n = new Node(val);
+        if (!head) { head = n; return; }
+        Node* curr = head;
+        while (curr->next) curr = curr->next;
+        curr->next = n;
+    }
+    void remove(int val) {
+        if (!head) { cout << "Empty!\\n"; return; }
+        if (head->data == val) {
+            Node* t = head; head = head->next; delete t; return;
+        }
+        Node* curr = head;
+        while (curr->next && curr->next->data != val) curr = curr->next;
+        if (!curr->next) { cout << "Not found!\\n"; return; }
+        Node* t = curr->next; curr->next = t->next; delete t;
+    }
+    bool search(int val) {
+        Node* curr = head;
+        while (curr) { if (curr->data == val) return true; curr = curr->next; }
+        return false;
+    }
+    void display() {
+        if (!head) { cout << "[ Empty ]\\n"; return; }
+        Node* curr = head;
+        while (curr) { cout << "[" << curr->data << "]"; if (curr->next) cout << " -> "; curr = curr->next; }
+        cout << " -> NULL\\n";
+    }
+};`,
+    'Stack.h': `#pragma once
+#include <iostream>
+using namespace std;
+
+class Stack {
+    int arr[100];
+    int top = -1;
+public:
+    void push(int val) { arr[++top] = val; cout << val << " pushed.\\n"; }
+    int pop() {
+        if (top == -1) { cout << "Stack empty!\\n"; return -1; }
+        return arr[top--];
+    }
+    int peek() { return top == -1 ? -1 : arr[top]; }
+    bool isEmpty() { return top == -1; }
+    void display() {
+        if (top == -1) { cout << "[ Empty Stack ]\\n"; return; }
+        for (int i = top; i >= 0; i--) {
+            cout << (i == top ? "TOP -> " : "       ") << "[" << arr[i] << "]\\n";
+        }
+        cout << "       ------\\n";
+    }
+};`,
+    'Queue.h': `#pragma once
+#include <iostream>
+using namespace std;
+
+struct QNode { int data; QNode* next; QNode(int v) : data(v), next(nullptr) {} };
+
+class Queue {
+    QNode *front, *back;
+public:
+    Queue() : front(nullptr), back(nullptr) {}
+    void enqueue(int val) {
+        QNode* n = new QNode(val);
+        if (!back) { front = back = n; return; }
+        back->next = n; back = n;
+    }
+    int dequeue() {
+        if (!front) { cout << "Queue empty!\\n"; return -1; }
+        int v = front->data;
+        QNode* t = front; front = front->next;
+        if (!front) back = nullptr;
+        delete t; return v;
+    }
+    int peekFront() { return front ? front->data : -1; }
+    void display() {
+        if (!front) { cout << "[ Empty Queue ]\\n"; return; }
+        cout << "FRONT -> ";
+        QNode* curr = front;
+        while (curr) { cout << "[" << curr->data << "]"; if (curr->next) cout << " "; curr = curr->next; }
+        cout << " <- BACK\\n";
+    }
+};`,
+    'BST.h': `#pragma once
+#include <iostream>
+using namespace std;
+
+struct BSTNode { int val; BSTNode *left, *right; BSTNode(int v) : val(v), left(nullptr), right(nullptr) {} };
+
+class BST {
+    BSTNode* root = nullptr;
+    BSTNode* insert(BSTNode* n, int v) {
+        if (!n) return new BSTNode(v);
+        if (v < n->val) n->left = insert(n->left, v);
+        else if (v > n->val) n->right = insert(n->right, v);
+        return n;
+    }
+    bool search(BSTNode* n, int v) {
+        if (!n) return false;
+        if (n->val == v) return true;
+        return v < n->val ? search(n->left,v) : search(n->right,v);
+    }
+    void inorder(BSTNode* n) {
+        if (!n) return;
+        inorder(n->left); cout << n->val << " "; inorder(n->right);
+    }
+public:
+    void insert(int v) { root = insert(root, v); }
+    bool search(int v) { return search(root, v); }
+    void display() { cout << "Inorder: "; inorder(root); cout << "\\n"; }
+};`,
+    'README.md': `# Data Structures Visualizer
+A C++ console application to visualize and interact with core data structures.
+
+## Author
+Yousuf Magdy — Computer Engineering Student, Badr University Cairo
+
+## Data Structures Implemented
+- Singly Linked List (insert, delete, search, display)
+- Stack (push, pop, peek, display)
+- Queue (enqueue, dequeue, peekFront, display)
+- Binary Search Tree (insert, search, inorder display)
+
+## How to Run
+\`\`\`bash
+g++ main.cpp -o visualizer
+./visualizer
+\`\`\`
+
+## Skills Demonstrated
+- C++ OOP (classes, structs, pointers)
+- Dynamic memory management (new/delete)
+- Recursive algorithms (BST)
+- Data structure design and implementation
+`
+  };
+
+  // Create zip-like: just download as a combined text file with markers
+  let content = '';
+  for (const [fname, code] of Object.entries(files)) {
+    content += `\n${'='.repeat(60)}\n FILE: ${fname}\n${'='.repeat(60)}\n${code}\n`;
+  }
+
+  const blob = new Blob([content], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'DataStructures_Visualizer_CPP.txt';
+  a.click();
+  log('C++ source files downloaded!', 'success');
+}
+
+// Init
+renderViz();
+renderCode();
+</script>
+</body>
+</html>
